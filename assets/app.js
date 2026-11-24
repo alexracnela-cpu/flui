@@ -127,12 +127,12 @@ const comOutro = (fo,f) => fo[f]==='Outro' ? (fo[f+'Outro']||'').trim() : (fo[f]
 
 /* ---------- Todos ---------- */
 function vTodos(){
-  const k='todos', q=val(k,'q').toLowerCase(), et=val(k,'et','aberto'), tp=val(k,'tp','*'), zn=val(k,'zn','*'), ord=val(k,'ord','setor'), se=val(k,'se','*'), vis=val(k,'vis','lista'), pg=+val(k,'pg',0);
+  const k='todos', q=val(k,'q').toLowerCase(), et=val(k,'et','aberto'), tp=val(k,'tp','*'), zn=val(k,'zn','*'), og=val(k,'og','*'), ord=val(k,'ord','setor'), se=val(k,'se','*'), vis=val(k,'vis','lista'), pg=+val(k,'pg',0);
   const ANO = hoje().slice(0,4);
   const SETORES = [...EQS,'Levantamento','Quem cadastrou'];
   const setorDe = r => ({aval:r.equipe,exec:r.equipe,lev:'Levantamento',resp:'Quem cadastrou',fim:'Concluídos',inv:'Inválidos'})[r.etapa];
   const ORD = ['aval','lev','exec','resp','fim','inv'], ORDS=[...SETORES,'Concluídos','Inválidos'];
-  const ok = r => (et==='*'||(et==='aberto'?!fechado(r):r.etapa===et)) && (se==='*'||setorDe(r)===se) && (tp==='*'||r.tipo===tp) && (zn==='*'||r.zona===zn) && (!q||(r.numero+' '+r.logradouro+' '+(r.bairro||'')).toLowerCase().includes(q));
+  const ok = r => (et==='*'||(et==='aberto'?!fechado(r):r.etapa===et)) && (se==='*'||setorDe(r)===se) && (tp==='*'||r.tipo===tp) && (zn==='*'||r.zona===zn) && (og==='*'||(r.origem||'Sem origem')===og) && (!q||(r.numero+' '+r.logradouro+' '+(r.bairro||'')).toLowerCase().includes(q));
   const linhas = D.filter(ok).sort(ord==='setor' ? (a,b)=>ORDS.indexOf(setorDe(a))-ORDS.indexOf(setorDe(b))||ORD.indexOf(a.etapa)-ORD.indexOf(b.etapa)||String(a.recebido_em).localeCompare(String(b.recebido_em)) : ord==='recentes' ? (a,b)=>String(b.recebido_em).localeCompare(String(a.recebido_em))||b.id-a.id : ord==='prazo' ? (a,b)=>{const va=prazoTxt(a).v, vb=prazoTxt(b).v; return (va==null?1e5:va)-(vb==null?1e5:vb);} : (a,b)=>ORD.indexOf(a.etapa)-ORD.indexOf(b.etapa)||String(a.recebido_em).localeCompare(String(b.recebido_em)));
   const POR=30, tot=Math.max(1,Math.ceil(linhas.length/POR)), pagina=Math.min(pg,tot-1);
   const zonas=[...new Set(D.map(r=>r.zona).filter(Boolean))].sort();
@@ -152,13 +152,14 @@ function vTodos(){
   const lista = linhas.slice(pagina*POR,pagina*POR+POR).map(r=>{ let h=''; if(ord==='setor'){ const g=setorDe(r); if(g!==g0){ g0=g; h=`<div class="grp-cab" style="--c:${COR_SETOR[g]}"><i></i><span>${g==='Quem cadastrou'?'Quem cadastrou · respostas':g}</span><b>${totG[g]}</b></div>`; } } return h+card(r); }).join('');
   return `<div class="cab"><div><h2>Todos os pedidos</h2><p>Com quem cada pedido está agora. Clique num setor para filtrar, ou num pedido para ver o caminho dele.</p></div>
   <div class="seg-v" role="group" aria-label="Forma de ver"><button type="button" data-act="set" data-k="${k}" data-f="vis" data-v="lista" aria-pressed="${vis==='lista'}">Lista</button><button type="button" data-act="set" data-k="${k}" data-f="vis" data-v="quadro" aria-pressed="${vis==='quadro'}">Quadro por setor</button></div></div>
-  <div class="resumo">${['O','E','V'].map(tq=>{ const [n,vc,org]=pend(tq), on=tp===tq&&et==='aberto', ors=['AGEMAN','UGPM',...Object.keys(org).filter(o=>o!=='AGEMAN'&&o!=='UGPM')]; return `<button type="button" class="res" data-act="fres" data-v="${tq}" aria-pressed="${on}"><span class="rt">${{O:'Ofícios',E:'Encaminhamentos',V:'Ouvidorias'}[tq]}</span><span class="rq">${n}</span><span class="rs">pendentes de resposta${vc?` · <b class="vermelho">${vc} vencido${vc>1?'s':''}</b>`:''}</span><span class="ro">${ors.map(o=>`<span><em>${esc(o)}</em><b>${org[o]?org[o].size:0}</b></span>`).join('')}</span></button>`; }).join('')}</div>
+  <div class="resumo">${['O','E','V'].map(tq=>{ const [n,vc,org]=pend(tq), on=tp===tq&&et==='aberto', ors=['AGEMAN','UGPM',...Object.keys(org).filter(o=>o!=='AGEMAN'&&o!=='UGPM')]; return `<div class="res ${on&&og==='*'?'on':''}"><button type="button" class="res-bt" data-act="fres" data-v="${tq}" aria-pressed="${on&&og==='*'}"><span class="rt">${{O:'Ofícios',E:'Encaminhamentos',V:'Ouvidorias'}[tq]}</span><span class="rq">${n}</span><span class="rs">pendentes de resposta${vc?` · <b class="vermelho">${vc} vencido${vc>1?'s':''}</b>`:''}</span></button><div class="ro" role="group" aria-label="Filtrar ${{O:'ofícios',E:'encaminhamentos',V:'ouvidorias'}[tq]} por origem">${ors.map(o=>{ const c=org[o]?org[o].size:0, oo=on&&og===o; return `<button type="button" data-act="fog" data-v="${tq}|${esc(o)}" aria-pressed="${oo}" ${c||oo?'':'disabled'}><em>${esc(o)}</em><b>${c}</b></button>`; }).join('')}</div></div>`; }).join('')}</div>
   <div class="esteira">${SETORES.map(q=>{ const it=porSetor(q), sub=EQS.includes(q)?[['aval','Avaliação'],['exec','Execução']].map(([e,n])=>[e,n,it.filter(r=>r.etapa===e).length]):null, on=se===q;
     return `<div class="est ${on?'on':''}" style="--c:${COR_SETOR[q]}"><button type="button" class="est-bt" data-act="fse" data-v="${q}" aria-pressed="${on}"><span class="setor">${q==='Quem cadastrou'?'Cadastro de pedidos':'Equipe'}</span><span class="nome">${q==='Quem cadastrou'?'Respostas':q}</span><span class="qt">${it.length}</span></button>${sub?`<ul class="poreq">${sub.map(([e,n,c])=>`<li><button type="button" data-act="fseEt" data-v="${q}|${e}" aria-pressed="${on&&et===e}" ${c?'':'disabled'}><span>${n}</span><b>${c}</b></button></li>`).join('')}</ul>`:`<ul class="poreq"><li><button type="button" disabled><span>${q==='Levantamento'?'Para levantar':'Para responder'}</span><b>${it.length}</b></button></li></ul>`}</div>`; }).join('')}<div class="est fim ${et==='fim'?'on':''}" style="--c:${COR_SETOR['Concluídos']}"><button type="button" class="est-bt" data-act="fet" data-v="fim" aria-pressed="${et==='fim'}"><span class="setor">Concluídos</span><span class="nome">em ${ANO}</span><span class="qt">${D.filter(r=>r.etapa==='fim'&&String(r.recebido_em).startsWith(ANO)).length}</span></button></div></div>
   <div class="filtros" data-k="${k}"><div class="g"><label class="lb" for="t-q">Buscar</label><input id="t-q" type="search" class="f" data-f="q" data-re="1" value="${esc(val(k,'q'))}" placeholder="Número, rua ou bairro"></div>
   ${sel('t-tp','tp','Tipo',[['*','Todos'],...Object.entries(TIPO)],tp)}
   ${sel('t-et','et','Etapa',[['aberto','Em andamento'],['*','Todas'],...Object.entries(ETAPA).map(([a,b])=>[a,b[0]])],et)}
   ${sel('t-se','se','Setor',[['*','Todos'],...SETORES.map(e=>[e,e==='Quem cadastrou'?'Quem cadastrou (respostas)':e])],se)}
+  ${sel('t-og','og','Origem',[['*','Todas'],['AGEMAN','AGEMAN'],['UGPM','UGPM'],['Sem origem','Sem origem']],og)}
   ${sel('t-zn','zn','Zona',[['*','Todas'],...zonas.map(z=>[z,z])],zn)}
   ${sel('t-or','ord','Organizar por',[['setor','Setor'],['etapa','Etapa'],['recentes','Mais recentes'],['prazo','Prazo']],ord)}</div>
   ${vis==='quadro'?`<div class="quadro">${quadro}</div>`:`<div class="lista">${lista||'<p class="vazio">Nenhum pedido com esses filtros.</p>'}</div>
@@ -339,7 +340,8 @@ const A = {
   set: (v,el) => { const k=el.dataset.k; F(k)[el.dataset.f]=v; delete F(k)._er; if(k==='todos') F(k).pg=0; },
   eqs: v => { const f=F('novo'), a=f.eqs||[]; f.eqs = a.includes(v)?a.filter(x=>x!==v):EQS.filter(e=>a.includes(e)||e===v); },
   tira: (v,el) => { if(ARQ[el.dataset.k]) delete ARQ[el.dataset.k][el.dataset.f]; },
-  fres: v => { const f=F('todos'); if(f.tp===v&&(f.et||'aberto')==='aberto'){ f.tp='*'; } else { f.tp=v; f.et='aberto'; f.se='*'; } f.pg=0; },
+  fres: v => { const f=F('todos'); if(f.tp===v&&(f.et||'aberto')==='aberto'&&(f.og||'*')==='*'){ f.tp='*'; } else { f.tp=v; f.et='aberto'; f.se='*'; } f.og='*'; f.pg=0; },
+  fog: v => { const f=F('todos'), [tq,o]=v.split('|'); if(f.tp===tq&&f.og===o&&(f.et||'aberto')==='aberto'){ f.tp='*'; f.og='*'; } else { f.tp=tq; f.og=o; f.et='aberto'; f.se='*'; } f.pg=0; },
   fse: v => { const f=F('todos'); if(f.se===v){ f.se='*'; } else { f.se=v; f.et='aberto'; } f.pg=0; },
   fseEt: v => { const [q,e]=v.split('|'), f=F('todos'); if(f.se===q&&f.et===e){ f.et='aberto'; } else { f.se=q; f.et=e; } f.pg=0; },
   fet: v => { const f=F('todos'); f.et=(f.et||'aberto')===v?'aberto':v; f.se='*'; f.pg=0; },

@@ -138,10 +138,15 @@ textarea.f{height:96px;padding:10px 12px;resize:vertical}
 .seg-v button{height:38px;padding:0 14px;border:0;border-radius:9px;background:none;font-weight:700;color:var(--mut)}
 .seg-v button[aria-pressed=true]{background:var(--sf);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px}
-.res{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:14px 18px;border-radius:16px;border:1px solid var(--ln);background:var(--sf)}
+.res{display:flex;flex-direction:column;border-radius:16px;border:1px solid var(--ln);background:var(--sf);overflow:hidden}
+.res-bt{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:14px 18px 10px;background:none;border:0;width:100%;cursor:pointer;color:inherit;font:inherit}
 .res .rt{font-size:14px;font-weight:800;color:var(--fo)}.res .rq{font-size:36px;font-weight:800;line-height:1.1;letter-spacing:-.02em}.res .rs{font-size:13px;color:var(--mut)}
-.res .ro{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;padding-top:10px;border-top:1px solid var(--ln);width:100%;font-size:13px;color:var(--mut)}.res .ro span{display:inline-flex;gap:6px;align-items:baseline}.res .ro em{font-style:normal;font-weight:700;letter-spacing:.02em}.res .ro b{font-size:16px;color:var(--fo)}
-.res[aria-pressed=true]{border:2px solid var(--act);background:var(--okb)}
+.res .ro{display:flex;flex-wrap:wrap;gap:6px;margin:0 18px 14px;padding-top:10px;border-top:1px solid var(--ln)}
+.res .ro button{display:inline-flex;gap:6px;align-items:baseline;padding:4px 10px;border-radius:999px;border:1px solid var(--ln);background:none;color:var(--mut);font:inherit;font-size:13px;cursor:pointer}
+.res .ro button:hover:not(:disabled){border-color:var(--act)}.res .ro button:disabled{opacity:.5;cursor:default}
+.res .ro em{font-style:normal;font-weight:700;letter-spacing:.02em}.res .ro b{font-size:15px;color:var(--fo)}
+.res .ro button[aria-pressed=true]{border:2px solid var(--act);background:var(--okb);color:var(--fo)}
+.res.on{border:2px solid var(--act);background:var(--okb)}
 .esteira{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
 .seta{display:flex;align-items:center;color:var(--s3);font-size:22px;font-weight:800}
 .est{display:flex;flex-direction:column;border-radius:14px;border:1px solid var(--ln);border-top:6px solid var(--c,var(--s3));background:var(--sf);overflow:hidden}

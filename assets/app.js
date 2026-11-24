@@ -86,8 +86,11 @@ function precisaDet(id){ if(DET[id]) return DET[id]; carregarDet(id).then(render
 async function depois(id, msg, tipo){ delete DET[id]; await recarregar(); MSG = msg ? [msg, tipo||'ok'] : null; render(); window.scrollTo({top:0, behavior:'smooth'}); }
 
 /* ---------- abas por setor ---------- */
+const eqAtual = aba => { if(!EU.admin || EQS.includes(meu())) return EQS.includes(meu()) && !EU.admin ? meu() : val('adm','eq', EQS.includes(meu()) ? meu() : 'Manutenção'); return val('adm','eq','Manutenção'); };
+const seletorEq = aba => !EU.admin ? '' : `<div class="fchips" style="margin:0 0 14px"><span class="sub">Equipe</span>${EQS.map(e=>`<button type="button" class="fchip" data-act="set" data-k="adm" data-f="eq" data-v="${e}" aria-pressed="${eqAtual(aba)===e}">${e} · ${filas[aba](e).length}</button>`).join('')}</div>`;
 function abasDo(){
   const s=meu(); let a;
+  if(EU.admin){ const n=f=>EQS.reduce((t,e)=>t+filas[f](e).length,0); return [['todos','Todos',null],['novo','Novo cadastro',null],['aval','Avaliação',n('aval')],['lev','Levantamento',filas.lev().length],['exec','Execução',n('exec')],['aprov','Aprovações',filas.aprov().length],['resp','Respostas',filas.resp().length],['usuarios','Usuários',null]]; }
   if(s==='Cadastro de pedidos') a=[['todos','Todos',null],['novo','Novo cadastro',null],['aprov','Aprovações',filas.aprov().length],['resp','Respostas',filas.resp().length]];
   else if(s==='Levantamento') a=[['todos','Todos',null],['lev','Levantamento',filas.lev().length]];
   else if(EQS.includes(s)) a=[['todos','Todos',null],['aval','Avaliação',filas.aval(s).length],['exec','Execução',filas.exec(s).length]];
@@ -136,7 +139,7 @@ function vTodos(){
   const sel=(id,f,lb,ops,v)=>`<div><label class="lb" for="${id}">${lb}</label><select id="${id}" class="f" data-f="${f}" data-re="1">${ops.map(([a,b])=>`<option value="${esc(a)}" ${v===a?'selected':''}>${esc(b)}</option>`).join('')}</select></div>`;
   const trilha = r => { const passos=['Cadastro','Avaliação','Levan­tamento','Execução','Resposta'], idx={aval:1,lev:2,exec:3,resp:4,fim:5,inv:1}[r.etapa];
     return `<span class="trilha" aria-label="Etapa atual: ${ETAPA[r.etapa][0]}">${passos.map((n,i)=>{ let c=i<idx?'feito':i===idx?'agora':'pend'; if(r.etapa==='inv'&&i===1) c='canc'; if(r.etapa==='inv'&&i>1) c='nada'; return `<span class="tp ${c}"><i></i><em>${n}</em></span>`; }).join('')}</span>`; };
-  const frase = r => { const d=dias(r.etapa_desde,hoje());
+  const frase = r => { const d=dias(r.importado?r.recebido_em:r.etapa_desde,hoje());
     if(r.etapa==='fim') return `<span class="quem">Concluído</span><span>${ST[r.status][0]}${r.resposta_num?' · carta <b>'+esc(r.resposta_num)+'</b>':''}</span>${r.resposta_num?`<span class="envio">${r.resposta_data?'Enviada em <b>'+dt(r.resposta_data)+'</b>':'Data de envio não registrada'}</span>`:''}`;
     if(r.etapa==='inv') return `<span class="quem">Inválido</span><span>${esc(r.motivo_inv||'')}</span>`;
     const quem={aval:r.equipe,lev:'Levantamento',exec:r.equipe,resp:'Quem cadastrou'}[r.etapa], pz=prazoTxt(r);
@@ -217,7 +220,7 @@ async function enviarNovo(){
 
 /* ---------- Avaliação ---------- */
 function vAval(){
-  const eq=meu(), itens=ordemFila(filas.aval(eq)), sel=selAtual('aval',itens), r=itens.find(x=>x.id===sel);
+  const eq=eqAtual('aval'), itens=ordemFila(filas.aval(eq)), sel=selAtual('aval',itens), r=itens.find(x=>x.id===sel);
   const fila = filaHtml('Aguardando avaliação', itens, sel, 'Nada para avaliar agora.', r=>{const pz=prazoTxt(r);return pz.v==null?'Há '+dias(r.recebido_em,hoje())+' dias · sem prazo':pz.t;});
   let corpo='';
   if(r){ const k='av:'+r.id, d=val(k,'dec'), er=val(k,'_er','');
@@ -227,7 +230,7 @@ function vAval(){
     ${d==='V'?`<div class="caixa"><div><label class="lb" for="av-or">Orientação para o Levantamento <span class="op">(opcional)</span></label><textarea id="av-or" class="f" data-f="orient">${esc(val(k,'orient'))}</textarea></div><div class="acoes"><button type="button" class="b p" data-act="validar">Encaminhar para Levantamento →</button></div></div>`:''}
     ${d==='I'?`<div class="caixa" style="background:var(--red)"><div><label class="lb" for="av-mo">Motivo <span class="req">*</span></label><select id="av-mo" class="f" data-f="motivo" data-re="1"><option value="">Selecione</option>${MOT_INV.map(m=>`<option ${val(k,'motivo')===m?'selected':''}>${m}</option>`).join('')}</select>${outroCampo(k,'motivo',val(k,'motivo'))}</div><div><label class="lb" for="av-ju">Justificativa <span class="req">*</span></label><textarea id="av-ju" class="f" data-f="just" placeholder="Esse texto vai na resposta">${esc(val(k,'just'))}</textarea></div>${er?`<div class="aviso er">${er}</div>`:''}<div class="acoes"><button type="button" class="b neg" data-act="invalidar">Registrar como inválido</button></div></div>`:''}
     </section></div>`; }
-  return `<div class="cab"><div><h2>${esc(eq)} · Avaliação</h2><p>Veja o documento e decida: segue para o Levantamento ou é respondido como inválido.</p></div></div><div class="grid2">${fila}${corpo}</div>`;
+  return `<div class="cab"><div><h2>${esc(eq)} · Avaliação</h2><p>Veja o documento e decida: segue para o Levantamento ou é respondido como inválido.</p></div></div>${seletorEq('aval')}<div class="grid2">${fila}${corpo}</div>`;
 }
 
 /* ---------- Levantamento ---------- */
@@ -246,7 +249,7 @@ function vLev(){
 
 /* ---------- Execução ---------- */
 function vExec(){
-  const eq=meu(), itens=ordemFila(filas.exec(eq)), sel=selAtual('exec',itens), r=itens.find(x=>x.id===sel);
+  const eq=eqAtual('exec'), itens=ordemFila(filas.exec(eq)), sel=selAtual('exec',itens), r=itens.find(x=>x.id===sel);
   const fila = filaHtml('Para executar', itens, sel, 'Nada para executar agora.', r=>(r.prazo_id?'Prazo em aprovação · ':'')+prazoTxt(r).t);
   let corpo='';
   if(r){ const k='ex:'+r.id, st=val(k,'st',r.status||'P'), er=val(k,'_er',''), det=precisaDet(r.id);
@@ -267,7 +270,7 @@ function vExec(){
     <div class="lin" style="align-items:flex-end"><div><label class="lb" for="ro-d">Data da ronda</label><input id="ro-d" type="date" class="f" data-f="roData" value="${val(k,'roData')}"></div><div style="flex:3 1 220px"><label class="lb" for="ro-o">O que foi feito / previsto</label><input id="ro-o" class="f" data-f="roObs" value="${esc(val(k,'roObs'))}"></div><div style="flex:0 0 auto"><button type="button" class="b" data-act="addRonda">+ Ronda</button></div></div></section>
     <section class="card"><h2>Documentos da execução</h2>${det?det.arquivos.map(a=>`<div class="arq"><span>${esc(a.nome)}</span><span style="display:flex;gap:6px;flex:0 0 auto"><button type="button" class="b min" data-act="abrir" data-v="${esc(a.path)}">Abrir</button><button type="button" class="b min" data-act="tiraDoc" data-v="${a.id}">Remover</button></span></div>`).join(''):''}<label class="drop"><span aria-hidden="true">⇪</span><span>Anexar arquivos<small>Fotos (JPG/PNG) ou PDF · obrigatório para finalizar</small></span><input type="file" multiple accept=".pdf,image/jpeg,image/png" data-k="${k}" data-f="docs" data-up="1"></label></section>
     ${er?`<div class="aviso er">${er}</div>`:''}<div class="acoes"><button type="button" class="b p" data-act="salvarExec">${st==='P'?'Salvar atualização':'Finalizar e enviar para resposta'}</button></div></div>`; }
-  return `<div class="cab"><div><h2>${esc(eq)} · Execução</h2><p>Pedidos que voltaram do Levantamento. Registre rondas, documentos e o status.</p></div></div><div class="grid2">${fila}${corpo}</div>`;
+  return `<div class="cab"><div><h2>${esc(eq)} · Execução</h2><p>Pedidos que voltaram do Levantamento. Registre rondas, documentos e o status.</p></div></div>${seletorEq('exec')}<div class="grid2">${fila}${corpo}</div>`;
 }
 
 /* ---------- Aprovações ---------- */

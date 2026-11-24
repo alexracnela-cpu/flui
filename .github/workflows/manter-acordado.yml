@@ -1,0 +1,33 @@
+# Mantém o banco (Supabase do Flui/Rondaluz) acordado.
+# O plano gratuito do Supabase pausa o projeto depois de uns 7 dias sem uso.
+# Este robô faz uma consulta pequena ao banco todo dia. Usa só a chave pública.
+name: Manter o banco acordado
+
+on:
+  schedule:
+    - cron: '23 11 * * *'   # todo dia às 11h23 UTC (7h23 em Manaus)
+  workflow_dispatch:
+
+jobs:
+  consulta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: assets/config.js
+          sparse-checkout-cone-mode: false
+      - name: Consulta ao banco
+        run: |
+          URL=$(grep -o 'SUPABASE_URL: *"[^"]*"' assets/config.js | cut -d'"' -f2)
+          CHAVE=$(grep -o 'SUPABASE_CHAVE: *"[^"]*"' assets/config.js | cut -d'"' -f2)
+          for tentativa in 1 2 3; do
+            CODIGO=$(curl -s -o /dev/null -w '%{http_code}' \
+              "$URL/rest/v1/flui_bairros?select=nome&limit=1" \
+              -H "apikey: $CHAVE" -H "Authorization: Bearer $CHAVE")
+            echo "Tentativa $tentativa: HTTP $CODIGO"
+            if [ "$CODIGO" = "200" ]; then exit 0; fi
+            sleep 60
+          done
+          echo "::error::O banco não respondeu. Veja se o projeto foi pausado no painel do Supabase."
+          exit 1

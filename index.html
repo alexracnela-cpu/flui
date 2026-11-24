@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-tema="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flui · Encaminhamentos e ofícios</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 11c6-5 12 5 24-1' fill='none' stroke='%232E7D32' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M4 18c6-5 12 5 24-1' fill='none' stroke='%238FD16A' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M4 25c6-5 12 5 24-1' fill='none' stroke='%238AAA88' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/estilo.css?v=1">
+<script>try{var t=localStorage.getItem('flui-tema');if(t)document.documentElement.dataset.tema=t}catch(e){}</script>
+</head>
+<body>
+<section id="tela-acesso" class="acesso" hidden></section>
+
+<div id="app" hidden>
+<header class="top">
+  <div class="in">
+    <div class="marca">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 11c6-5 12 5 24-1" fill="none" stroke="#2E7D32" stroke-width="3.2" stroke-linecap="round"/><path d="M4 18c6-5 12 5 24-1" fill="none" stroke="#8FD16A" stroke-width="3.2" stroke-linecap="round"/><path d="M4 25c6-5 12 5 24-1" fill="none" stroke="#8AAA88" stroke-width="3.2" stroke-linecap="round"/></svg>
+      Flui
+    </div>
+    <button class="bt-top" id="atualizar" type="button">Atualizar</button>
+    <details class="menu-eu" id="menu-eu"><summary class="avatar" id="u-ini" aria-label="Minha conta"></summary>
+      <div class="menu-cx"><p class="menu-quem" id="u-quem"></p>
+        <button type="button" class="item" id="tema"></button>
+        <button type="button" class="item" id="trocar-senha">Trocar minha senha</button>
+        <button type="button" class="item" id="sair">Sair</button></div></details>
+  </div>
+</header>
+<div class="casca">
+  <nav class="lado" aria-label="Telas"><div id="lado-perfil" class="lado-perfil"></div><div class="abas" id="abas" role="tablist" aria-orientation="vertical"></div></nav>
+  <div class="conteudo"><main id="main"></main></div>
+</div>
+</div>
+
+<div id="camada"></div>
+<div id="carregando" class="carregando" hidden><span>Carregando…</span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="assets/config.js?v=1"></script>
+<script src="assets/app.js?v=1"></script>
+</body>
+</html>

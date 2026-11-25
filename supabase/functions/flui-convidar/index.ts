@@ -16,7 +16,7 @@ const CORS = {
 const resp = (corpo: unknown, status = 200) =>
   new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-const SETORES = ['Cadastro de pedidos', 'Manutenção', 'Obras leves', 'Obras pesadas', 'Cadastro', 'Levantamento', 'Gerência'];
+const SETORES = ['Cadastro de pedidos', 'Aprovações', 'Manutenção', 'Obras leves', 'Obras pesadas', 'Cadastro', 'Levantamento', 'Gerência'];
 const VALIDADE_H = 24;
 
 function senhaProvisoria() {

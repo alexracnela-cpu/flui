@@ -6,9 +6,14 @@ const sb = CONFIGURADO ? supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_CH
 const BUCKET = 'flui';
 
 /* ---------- constantes ---------- */
-const EQS = ['Manutenção', 'Obras leves', 'Obras pesadas', 'Cadastro'];
-const SETORES_TODOS = ['Cadastro de pedidos', ...EQS, 'Levantamento', 'Gerência'];
-const COR_SETOR = {'Manutenção':'#2E7D32','Obras leves':'#7A4FC0','Obras pesadas':'#3567B5','Cadastro':'#C2563B','Levantamento':'#2B8C9A','Quem cadastrou':'#D08A1E','Concluídos':'#6B7F6E','Inválidos':'#A1261B'};
+const IT = 'Informações técnicas';
+const EQS = ['Manutenção', 'Obras leves', 'Obras pesadas', 'Cadastro', IT];
+const SETORES_TODOS = ['Cadastro de pedidos', 'Aprovações', 'Manutenção', 'Obras leves', 'Obras pesadas', 'Cadastro', 'Levantamento', 'Gerência'];
+const NOME_EQ = e => e==='Cadastro' ? 'Setor de Cadastro' : e;
+const RESP = {'Manutenção':'Bruno','Obras leves':'Marília','Obras pesadas':'Renan','Cadastro':'Ricardo','Levantamento':'Leonardo'};
+const respDe = r => (r && (r.responsavel || RESP[r.equipe])) || '';
+const comResp = r => NOME_EQ(r.equipe) + (respDe(r) ? ' · '+respDe(r) : '');
+const COR_SETOR = {'Manutenção':'#2E7D32','Obras leves':'#7A4FC0','Obras pesadas':'#3567B5','Cadastro':'#C2563B','Levantamento':'#2B8C9A','Quem cadastrou':'#D08A1E','Concluídos':'#6B7F6E','Informações técnicas':'#5E6B8C','Inválidos':'#A1261B'};
 const SERVICOS = ['Implantação de iluminação pública','Instalação de luminária','Instalação de projetores','Instalação de cabo','Instalação provisória','Implantação de poste','Lançamento de cabo','Manutenção','Melhoramento de iluminação','Reposição de cabo','Reposição de iluminação','Reposição de luminária','Cadastro','Outro'];
 const MOT_INV = ['Fora da área do contrato','Serviço já executado','Pedido duplicado','Informações insuficientes no documento','Não é serviço de iluminação pública','Outro'];
 const MOT_NEX = ['Sem rede BT / sem baixa tensão','Risco de execução','Sem acesso a caminhão','Rede SMC','Outro'];
@@ -86,12 +91,14 @@ function precisaDet(id){ if(DET[id]) return DET[id]; carregarDet(id).then(render
 async function depois(id, msg, tipo){ delete DET[id]; await recarregar(); MSG = msg ? [msg, tipo||'ok'] : null; render(); window.scrollTo({top:0, behavior:'smooth'}); }
 
 /* ---------- abas por setor ---------- */
-const eqAtual = aba => { if(!EU.admin || EQS.includes(meu())) return EQS.includes(meu()) && !EU.admin ? meu() : val('adm','eq', EQS.includes(meu()) ? meu() : 'Manutenção'); return val('adm','eq','Manutenção'); };
+const eqAtual = aba => { if(!EU.admin && !EQS.includes(meu())) return IT; if(!EU.admin || EQS.includes(meu())) return EQS.includes(meu()) && !EU.admin ? meu() : val('adm','eq', EQS.includes(meu()) ? meu() : 'Manutenção'); return val('adm','eq','Manutenção'); };
 const seletorEq = aba => !EU.admin ? '' : `<div class="fchips" style="margin:0 0 14px"><span class="sub">Equipe</span>${EQS.map(e=>`<button type="button" class="fchip" data-act="set" data-k="adm" data-f="eq" data-v="${e}" aria-pressed="${eqAtual(aba)===e}">${e} · ${filas[aba](e).length}</button>`).join('')}</div>`;
 function abasDo(){
   const s=meu(); let a;
   if(EU.admin){ const n=f=>EQS.reduce((t,e)=>t+filas[f](e).length,0); return [['todos','Todos',null],['novo','Novo cadastro',null],['aval','Avaliação',n('aval')],['lev','Levantamento',filas.lev().length],['exec','Execução',n('exec')],['aprov','Aprovações',filas.aprov().length],['resp','Respostas',filas.resp().length],['usuarios','Usuários',null]]; }
-  if(s==='Cadastro de pedidos') a=[['todos','Todos',null],['novo','Novo cadastro',null],['aprov','Aprovações',filas.aprov().length],['resp','Respostas',filas.resp().length]];
+  const itAbas=[['aval','Info. técnicas · Avaliação',filas.aval(IT).length],['exec','Info. técnicas · Execução',filas.exec(IT).length]];
+  if(s==='Cadastro de pedidos') a=[['todos','Todos',null],['novo','Novo cadastro',null],['aprov','Aprovações',filas.aprov().length],...itAbas,['resp','Respostas',filas.resp().length]];
+  else if(s==='Aprovações') a=[['todos','Todos',null],['aprov','Aprovações',filas.aprov().length],...itAbas];
   else if(s==='Levantamento') a=[['todos','Todos',null],['lev','Levantamento',filas.lev().length]];
   else if(EQS.includes(s)) a=[['todos','Todos',null],['aval','Avaliação',filas.aval(s).length],['exec','Execução',filas.exec(s).length]];
   else a=[['todos','Todos',null]];
@@ -112,10 +119,10 @@ function render(){
 }
 
 /* ---------- componentes ---------- */
-const chipsP = (r,extra) => `<div class="chips"><span class="chip">${TIPO[r.tipo].toUpperCase()}</span>${r.origem?`<span class="chip">${esc(r.origem)}</span>`:''}<span class="chip">${esc(r.equipe.toUpperCase())}</span>${extra||''}</div>`;
+const chipsP = (r,extra) => `<div class="chips"><span class="chip">${TIPO[r.tipo].toUpperCase()}</span>${r.origem?`<span class="chip">${esc(r.origem)}</span>`:''}<span class="chip">${esc(NOME_EQ(r.equipe).toUpperCase())}</span>${respDe(r)?`<span class="chip">${esc(respDe(r).toUpperCase())}</span>`:''}${extra||''}</div>`;
 const cabecalho = (r,extra) => `${chipsP(r,extra)}<h2 class="tit">${esc(nomeP(r))}</h2><p class="sub">${esc(r.logradouro)}${r.bairro?', '+esc(r.bairro):''} · ${esc(r.servico)}</p>`;
-const blocoDados = r => { const pr=prazoDe(r,'resposta'), pe=prazoDe(r,'execucao'), cl=v=>v!=null&&v<0?' venc':''; const irm=D.filter(x=>x.pedido_id===r.pedido_id).map(x=>x.equipe);
-  return `<section class="dados" aria-label="Dados do pedido"><div class="prz${cl(pe.v)}"><small>Prazo de execução</small><b>${pe.t}</b><small>${pe.s}</small></div><div class="prz${cl(pr.v)}"><small>Prazo de resposta (carta)</small><b>${pr.t}</b><small>${pr.s}</small></div><dl class="kv">${[['Recebido em',dt(r.recebido_em)],['Bairro',r.bairro||'—'],['Zona',r.zona||'—'],['Equipes',irm.join(', ')],...(r.protocolo?[['Protocolo',r.protocolo]]:[])].map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>`; };
+const blocoDados = r => { const pr=prazoDe(r,'resposta'), pe=prazoDe(r,'execucao'), cl=v=>v!=null&&v<0?' venc':''; const irm=D.filter(x=>x.pedido_id===r.pedido_id).map(x=>(respDe(x)||'—')+' ('+NOME_EQ(x.equipe)+')');
+  return `<section class="dados" aria-label="Dados do pedido"><div class="prz${cl(pe.v)}"><small>Prazo de execução</small><b>${pe.t}</b><small>${pe.s}</small></div><div class="prz${cl(pr.v)}"><small>Prazo de resposta (carta)</small><b>${pr.t}</b><small>${pr.s}</small></div><dl class="kv">${[['Recebido em',dt(r.recebido_em)],['Bairro',r.bairro||'—'],['Zona',r.zona||'—'],['Responsável',irm.join(', ')],...(r.protocolo?[['Protocolo',r.protocolo]]:[])].map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></section>`; };
 const histHtml = det => det ? `<ul class="hist">${det.eventos.map(h=>`<li><i></i><span><b>${esc(h.texto)}</b> <small>· ${dataHora(h.quando)}${h.quem_nome?' · '+esc(h.quem_nome):''}</small></span></li>`).join('')}</ul>` : '<p class="sub">Carregando histórico…</p>';
 const filaHtml = (titulo, itens, sel, vazio, l3) => `<aside class="fila" aria-label="${titulo}"><h3>${titulo}<span>${itens.length}</span></h3>${itens.map(r=>{ const pz=prazoTxt(r); return `<button type="button" class="it ${pz.v!=null&&pz.v<0?'venc':''}" data-act="sel" data-v="${r.id}" aria-current="${r.id===sel}"><span class="l1">${esc(r.numero)}<small>${r.tipo==='O'?'OFÍCIO':r.tipo==='V'?'OUVIDORIA':'ENC.'}</small></span><span class="l2">${esc(r.logradouro)}${r.bairro?' · '+esc(r.bairro):''}</span><span class="l3">${esc(l3(r))}</span></button>`; }).join('')||`<p class="vazio">${vazio}</p>`}</aside>`;
 const botaoArq = (path, rotulo) => path ? `<div class="arq" style="background:var(--s1);color:var(--ink)"><span>${rotulo?`<small class="sub">${rotulo}</small><br>`:''}${esc(nomeArq(path))}</span><button type="button" class="b min" data-act="abrir" data-v="${esc(path)}">Abrir</button></div>` : '';
@@ -132,7 +139,7 @@ function vTodos(){
   const SETORES = [...EQS,'Levantamento','Quem cadastrou'];
   const setorDe = r => ({aval:r.equipe,exec:r.equipe,lev:'Levantamento',resp:'Quem cadastrou',fim:'Concluídos',inv:'Inválidos'})[r.etapa];
   const ORD = ['aval','lev','exec','resp','fim','inv'], ORDS=[...SETORES,'Concluídos','Inválidos'];
-  const ok = r => (et==='*'||(et==='aberto'?!fechado(r):r.etapa===et)) && (se==='*'||setorDe(r)===se) && (tp==='*'||r.tipo===tp) && (zn==='*'||r.zona===zn) && (og==='*'||(r.origem||'Sem origem')===og) && (!q||(r.numero+' '+r.logradouro+' '+(r.bairro||'')).toLowerCase().includes(q));
+  const ok = r => (et==='*'||(et==='aberto'?!fechado(r):r.etapa===et)) && (se==='*'||setorDe(r)===se) && (tp==='*'||r.tipo===tp) && (zn==='*'||r.zona===zn) && (og==='*'||(r.origem||'Sem origem')===og) && (!q||(r.numero+' '+r.logradouro+' '+(r.bairro||'')+' '+respDe(r)).toLowerCase().includes(q));
   const linhas = D.filter(ok).sort(ord==='setor' ? (a,b)=>ORDS.indexOf(setorDe(a))-ORDS.indexOf(setorDe(b))||ORD.indexOf(a.etapa)-ORD.indexOf(b.etapa)||String(a.recebido_em).localeCompare(String(b.recebido_em)) : ord==='recentes' ? (a,b)=>String(b.recebido_em).localeCompare(String(a.recebido_em))||b.id-a.id : ord==='prazo' ? (a,b)=>{const va=prazoTxt(a).v, vb=prazoTxt(b).v; return (va==null?1e5:va)-(vb==null?1e5:vb);} : (a,b)=>ORD.indexOf(a.etapa)-ORD.indexOf(b.etapa)||String(a.recebido_em).localeCompare(String(b.recebido_em)));
   const POR=30, tot=Math.max(1,Math.ceil(linhas.length/POR)), pagina=Math.min(pg,tot-1);
   const zonas=[...new Set(D.map(r=>r.zona).filter(Boolean))].sort();
@@ -142,19 +149,19 @@ function vTodos(){
   const frase = r => { const d=dias(r.importado?r.recebido_em:r.etapa_desde,hoje());
     if(r.etapa==='fim') return `<span class="quem">Concluído</span><span>${ST[r.status][0]}${r.resposta_num?' · carta <b>'+esc(r.resposta_num)+'</b>':''}</span>${r.resposta_num?`<span class="envio">${r.resposta_data?'Enviada em <b>'+dt(r.resposta_data)+'</b>':'Data de envio não registrada'}</span>`:''}`;
     if(r.etapa==='inv') return `<span class="quem">Inválido</span><span>${esc(r.motivo_inv||'')}</span>`;
-    const quem={aval:r.equipe,lev:'Levantamento',exec:r.equipe,resp:'Quem cadastrou'}[r.etapa], pz=prazoTxt(r);
+    const quem={aval:comResp(r),lev:'Levantamento · Leonardo',exec:comResp(r),resp:'Cadastro de pedidos · Valquíria'}[r.etapa], pz=prazoTxt(r);
     return `<span class="quem">${esc(quem)}</span><span>${ETAPA[r.etapa][0]} · há <b>${d} dias</b>${pz.v!=null&&pz.v<0?' · <b class="vermelho">vencido</b>':''}</span>`; };
-  const card = r => `<button type="button" class="pcard" style="--c:${COR_SETOR[setorDe(r)]}" data-act="det" data-v="${r.id}"><span class="top"><b>${esc(r.numero)}</b><small>${TIPO[r.tipo]}${r.importado?' · planilha':''}</small></span><span class="lg">${esc(r.logradouro||'—')}${r.bairro?' · '+esc(r.bairro):''}<small>${esc(r.servico)} · ${esc(r.equipe)}</small></span>${trilha(r)}<span class="fr">${frase(r)}</span></button>`;
+  const card = r => `<button type="button" class="pcard" style="--c:${COR_SETOR[setorDe(r)]}" data-act="det" data-v="${r.id}"><span class="top"><b>${esc(r.numero)}</b><small>${TIPO[r.tipo]}${r.importado?' · planilha':''}</small></span><span class="lg">${esc(r.logradouro||'—')}${r.bairro?' · '+esc(r.bairro):''}<small>${esc(r.servico)} · ${esc(comResp(r))}</small></span>${trilha(r)}<span class="fr">${frase(r)}</span></button>`;
   const porSetor = q => D.filter(r=>setorDe(r)===q);
   const pend = tq => { const ids=new Set(D.filter(r=>r.tipo===tq&&!fechado(r)).map(r=>r.pedido_id)); const vc=new Set(D.filter(r=>r.tipo===tq&&!fechado(r)&&(v=>v!=null&&v<0)(prazoDe(r,'resposta').v)).map(r=>r.pedido_id)); const org={}; D.filter(r=>r.tipo===tq&&!fechado(r)).forEach(r=>{ const o=r.origem||'Sem origem'; (org[o]=org[o]||new Set()).add(r.pedido_id); }); return [ids.size, vc.size, org]; };
-  const quadro = SETORES.map(q=>{ const it=D.filter(r=>setorDe(r)===q&&ok(r)).sort((a,b)=>String(a.recebido_em).localeCompare(String(b.recebido_em))); return `<div class="col" style="--c:${COR_SETOR[q]}"><h3><span>${q==='Quem cadastrou'?'Respostas':q}</span><b>${it.length}</b></h3>${it.slice(0,12).map(r=>`<button type="button" class="cartao" data-act="det" data-v="${r.id}"><b>${esc(r.numero)}</b><span>${esc(r.logradouro)}${r.bairro?' · '+esc(r.bairro):''}</span><small>${ETAPA[r.etapa][0]}</small></button>`).join('')||'<p class="vazio">Nada aqui.</p>'}${it.length>12?`<p class="sub" style="text-align:center;font-size:13px">+ ${it.length-12} na lista</p>`:''}</div>`; }).join('');
+  const quadro = SETORES.map(q=>{ const it=D.filter(r=>setorDe(r)===q&&ok(r)).sort((a,b)=>String(a.recebido_em).localeCompare(String(b.recebido_em))); return `<div class="col" style="--c:${COR_SETOR[q]}"><h3><span>${q==='Quem cadastrou'?'Respostas':NOME_EQ(q)}</span><b>${it.length}</b></h3>${it.slice(0,12).map(r=>`<button type="button" class="cartao" data-act="det" data-v="${r.id}"><b>${esc(r.numero)}</b><span>${esc(r.logradouro)}${r.bairro?' · '+esc(r.bairro):''}</span><small>${ETAPA[r.etapa][0]}${respDe(r)?' · '+esc(respDe(r)):''}</small></button>`).join('')||'<p class="vazio">Nada aqui.</p>'}${it.length>12?`<p class="sub" style="text-align:center;font-size:13px">+ ${it.length-12} na lista</p>`:''}</div>`; }).join('');
   let g0=null; const totG={}; linhas.forEach(r=>{const g=setorDe(r); totG[g]=(totG[g]||0)+1;});
-  const lista = linhas.slice(pagina*POR,pagina*POR+POR).map(r=>{ let h=''; if(ord==='setor'){ const g=setorDe(r); if(g!==g0){ g0=g; h=`<div class="grp-cab" style="--c:${COR_SETOR[g]}"><i></i><span>${g==='Quem cadastrou'?'Quem cadastrou · respostas':g}</span><b>${totG[g]}</b></div>`; } } return h+card(r); }).join('');
+  const lista = linhas.slice(pagina*POR,pagina*POR+POR).map(r=>{ let h=''; if(ord==='setor'){ const g=setorDe(r); if(g!==g0){ g0=g; h=`<div class="grp-cab" style="--c:${COR_SETOR[g]}"><i></i><span>${g==='Quem cadastrou'?'Quem cadastrou · respostas':NOME_EQ(g)+(RESP[g]?' · '+RESP[g]:'')}</span><b>${totG[g]}</b></div>`; } } return h+card(r); }).join('');
   return `<div class="cab"><div><h2>Todos os pedidos</h2><p>Com quem cada pedido está agora. Clique num setor para filtrar, ou num pedido para ver o caminho dele.</p></div>
   <div class="seg-v" role="group" aria-label="Forma de ver"><button type="button" data-act="set" data-k="${k}" data-f="vis" data-v="lista" aria-pressed="${vis==='lista'}">Lista</button><button type="button" data-act="set" data-k="${k}" data-f="vis" data-v="quadro" aria-pressed="${vis==='quadro'}">Quadro por setor</button></div></div>
   <div class="resumo">${['O','E','V'].map(tq=>{ const [n,vc,org]=pend(tq), on=tp===tq&&et==='aberto', ors=['AGEMAN','UGPM',...Object.keys(org).filter(o=>o!=='AGEMAN'&&o!=='UGPM')]; return `<div class="res ${on&&og==='*'?'on':''}"><button type="button" class="res-bt" data-act="fres" data-v="${tq}" aria-pressed="${on&&og==='*'}"><span class="rt">${{O:'Ofícios',E:'Encaminhamentos',V:'Ouvidorias'}[tq]}</span><span class="rq">${n}</span><span class="rs">pendentes de resposta${vc?` · <b class="vermelho">${vc} vencido${vc>1?'s':''}</b>`:''}</span></button><div class="ro" role="group" aria-label="Filtrar ${{O:'ofícios',E:'encaminhamentos',V:'ouvidorias'}[tq]} por origem">${ors.map(o=>{ const c=org[o]?org[o].size:0, oo=on&&og===o; return `<button type="button" data-act="fog" data-v="${tq}|${esc(o)}" aria-pressed="${oo}" ${c||oo?'':'disabled'}><em>${esc(o)}</em><b>${c}</b></button>`; }).join('')}</div></div>`; }).join('')}</div>
   <div class="esteira">${SETORES.map(q=>{ const it=porSetor(q), sub=EQS.includes(q)?[['aval','Avaliação'],['exec','Execução']].map(([e,n])=>[e,n,it.filter(r=>r.etapa===e).length]):null, on=se===q;
-    return `<div class="est ${on?'on':''}" style="--c:${COR_SETOR[q]}"><button type="button" class="est-bt" data-act="fse" data-v="${q}" aria-pressed="${on}"><span class="setor">${q==='Quem cadastrou'?'Cadastro de pedidos':'Equipe'}</span><span class="nome">${q==='Quem cadastrou'?'Respostas':q}</span><span class="qt">${it.length}</span></button>${sub?`<ul class="poreq">${sub.map(([e,n,c])=>`<li><button type="button" data-act="fseEt" data-v="${q}|${e}" aria-pressed="${on&&et===e}" ${c?'':'disabled'}><span>${n}</span><b>${c}</b></button></li>`).join('')}</ul>`:`<ul class="poreq"><li><button type="button" disabled><span>${q==='Levantamento'?'Para levantar':'Para responder'}</span><b>${it.length}</b></button></li></ul>`}</div>`; }).join('')}<div class="est fim ${et==='fim'?'on':''}" style="--c:${COR_SETOR['Concluídos']}"><button type="button" class="est-bt" data-act="fet" data-v="fim" aria-pressed="${et==='fim'}"><span class="setor">Concluídos</span><span class="nome">em ${ANO}</span><span class="qt">${D.filter(r=>r.etapa==='fim'&&String(r.recebido_em).startsWith(ANO)).length}</span></button></div></div>
+    return `<div class="est ${on?'on':''}" style="--c:${COR_SETOR[q]}"><button type="button" class="est-bt" data-act="fse" data-v="${q}" aria-pressed="${on}"><span class="setor">${q==='Quem cadastrou'?'Cadastro de pedidos · Valquíria':q===IT?'Mestrinho e Valquíria':(q==='Cadastro'?'Setor':'Equipe')+(RESP[q]?' · '+RESP[q]:'')}</span><span class="nome">${q==='Quem cadastrou'?'Respostas':NOME_EQ(q)}</span><span class="qt">${it.length}</span></button>${sub?`<ul class="poreq">${sub.map(([e,n,c])=>`<li><button type="button" data-act="fseEt" data-v="${q}|${e}" aria-pressed="${on&&et===e}" ${c?'':'disabled'}><span>${n}</span><b>${c}</b></button></li>`).join('')}</ul>`:`<ul class="poreq"><li><button type="button" disabled><span>${q==='Levantamento'?'Para levantar':'Para responder'}</span><b>${it.length}</b></button></li></ul>`}</div>`; }).join('')}<div class="est fim ${et==='fim'?'on':''}" style="--c:${COR_SETOR['Concluídos']}"><button type="button" class="est-bt" data-act="fet" data-v="fim" aria-pressed="${et==='fim'}"><span class="setor">Concluídos</span><span class="nome">em ${ANO}</span><span class="qt">${D.filter(r=>r.etapa==='fim'&&String(r.recebido_em).startsWith(ANO)).length}</span></button></div></div>
   <div class="filtros" data-k="${k}"><div class="g"><label class="lb" for="t-q">Buscar</label><input id="t-q" type="search" class="f" data-f="q" data-re="1" value="${esc(val(k,'q'))}" placeholder="Número, rua ou bairro"></div>
   ${sel('t-tp','tp','Tipo',[['*','Todos'],...Object.entries(TIPO)],tp)}
   ${sel('t-et','et','Etapa',[['aberto','Em andamento'],['*','Todas'],...Object.entries(ETAPA).map(([a,b])=>[a,b[0]])],et)}
@@ -198,7 +205,7 @@ function vNovo(){
   </section>
   <section class="card"><h2>4 · Documento digitalizado <span class="req">*</span></h2>${escolheArq(k,'doc','Anexar o PDF do '+TIPO[tp].toLowerCase(),'Só PDF, até 10 MB',er.doc)}</section>
   <section class="card"><h2>5 · Encaminhar</h2><span class="lb">Para quais equipes? <span class="req">*</span></span>
-    <div class="seg">${EQS.map(e=>`<button type="button" class="op-bt" data-act="eqs" data-v="${e}" aria-pressed="${eqs.includes(e)}" ${er.eqs&&!eqs.length?'style="border-color:var(--redt)"':''}>${eqs.includes(e)?'☑':'☐'} ${e}</button>`).join('')}</div>
+    <div class="seg">${EQS.map(e=>`<button type="button" class="op-bt" data-act="eqs" data-v="${e}" aria-pressed="${eqs.includes(e)}" ${er.eqs&&!eqs.length?'style="border-color:var(--redt)"':''}>${eqs.includes(e)?'☑':'☐'} ${NOME_EQ(e)}<small>${e===IT?'Mestrinho e Valquíria':RESP[e]}</small></button>`).join('')}</div>
     ${Object.keys(er).length?`<div class="aviso er">Faltam campos obrigatórios. Eles estão marcados em vermelho.</div>`:''}
     <div class="acoes"><button type="button" class="b" data-act="limpaNovo">Limpar</button><button type="button" class="b p" data-act="enviarNovo">${eqs.length?'Enviar para '+(eqs.length===1?eqs[0]:eqs.length+' equipes'):'Enviar'}</button></div>
   </section></div>`;
@@ -231,13 +238,13 @@ function vAval(){
     ${d==='V'?`<div class="caixa"><div><label class="lb" for="av-or">Orientação para o Levantamento <span class="op">(opcional)</span></label><textarea id="av-or" class="f" data-f="orient">${esc(val(k,'orient'))}</textarea></div><div class="acoes"><button type="button" class="b p" data-act="validar">Encaminhar para Levantamento →</button></div></div>`:''}
     ${d==='I'?`<div class="caixa" style="background:var(--red)"><div><label class="lb" for="av-mo">Motivo <span class="req">*</span></label><select id="av-mo" class="f" data-f="motivo" data-re="1"><option value="">Selecione</option>${MOT_INV.map(m=>`<option ${val(k,'motivo')===m?'selected':''}>${m}</option>`).join('')}</select>${outroCampo(k,'motivo',val(k,'motivo'))}</div><div><label class="lb" for="av-ju">Justificativa <span class="req">*</span></label><textarea id="av-ju" class="f" data-f="just" placeholder="Esse texto vai na resposta">${esc(val(k,'just'))}</textarea></div>${er?`<div class="aviso er">${er}</div>`:''}<div class="acoes"><button type="button" class="b neg" data-act="invalidar">Registrar como inválido</button></div></div>`:''}
     </section></div>`; }
-  return `<div class="cab"><div><h2>${esc(eq)} · Avaliação</h2><p>Veja o documento e decida: segue para o Levantamento ou é respondido como inválido.</p></div></div>${seletorEq('aval')}<div class="grid2">${fila}${corpo}</div>`;
+  return `<div class="cab"><div><h2>${esc(NOME_EQ(eq))} · Avaliação</h2><p>Veja o documento e decida: segue para o Levantamento ou é respondido como inválido.</p></div></div>${seletorEq('aval')}<div class="grid2">${fila}${corpo}</div>`;
 }
 
 /* ---------- Levantamento ---------- */
 function vLev(){
   const itens=filas.lev().sort((a,b)=>String(a.etapa_desde).localeCompare(String(b.etapa_desde))), sel=selAtual('lev',itens), r=itens.find(x=>x.id===sel);
-  const fila = filaHtml('Para levantar', itens, sel, 'Nenhum levantamento pendente.', r=>r.equipe+' · há '+dias(r.etapa_desde,hoje())+' dias');
+  const fila = filaHtml('Para levantar', itens, sel, 'Nenhum levantamento pendente.', r=>comResp(r)+' · há '+dias(r.etapa_desde,hoje())+' dias');
   let corpo='';
   if(r){ const k='lv:'+r.id, er=val(k,'_er'), det=precisaDet(r.id);
     corpo=`<div class="trab" data-k="${k}">${cabecalho(r,'<span class="chip c-blu">EM LEVANTAMENTO</span>')}${blocoDados(r)}
@@ -271,13 +278,13 @@ function vExec(){
     <div class="lin" style="align-items:flex-end"><div><label class="lb" for="ro-d">Data da ronda</label><input id="ro-d" type="date" class="f" data-f="roData" value="${val(k,'roData')}"></div><div style="flex:3 1 220px"><label class="lb" for="ro-o">O que foi feito / previsto</label><input id="ro-o" class="f" data-f="roObs" value="${esc(val(k,'roObs'))}"></div><div style="flex:0 0 auto"><button type="button" class="b" data-act="addRonda">+ Ronda</button></div></div></section>
     <section class="card"><h2>Documentos da execução</h2>${det?det.arquivos.map(a=>`<div class="arq"><span>${esc(a.nome)}</span><span style="display:flex;gap:6px;flex:0 0 auto"><button type="button" class="b min" data-act="abrir" data-v="${esc(a.path)}">Abrir</button><button type="button" class="b min" data-act="tiraDoc" data-v="${a.id}">Remover</button></span></div>`).join(''):''}<label class="drop"><span aria-hidden="true">⇪</span><span>Anexar arquivos<small>Fotos (JPG/PNG) ou PDF · obrigatório para finalizar</small></span><input type="file" multiple accept=".pdf,image/jpeg,image/png" data-k="${k}" data-f="docs" data-up="1"></label></section>
     ${er?`<div class="aviso er">${er}</div>`:''}<div class="acoes"><button type="button" class="b p" data-act="salvarExec">${st==='P'?'Salvar atualização':'Finalizar e enviar para resposta'}</button></div></div>`; }
-  return `<div class="cab"><div><h2>${esc(eq)} · Execução</h2><p>Pedidos que voltaram do Levantamento. Registre rondas, documentos e o status.</p></div></div>${seletorEq('exec')}<div class="grid2">${fila}${corpo}</div>`;
+  return `<div class="cab"><div><h2>${esc(NOME_EQ(eq))} · Execução</h2><p>Pedidos que voltaram do Levantamento. Registre rondas, documentos e o status.</p></div></div>${seletorEq('exec')}<div class="grid2">${fila}${corpo}</div>`;
 }
 
 /* ---------- Aprovações ---------- */
 function vAprov(){
   const itens=filas.aprov().sort((a,b)=>String(a.prazo_pedido_em).localeCompare(String(b.prazo_pedido_em))), sel=selAtual('aprov',itens), r=itens.find(x=>x.id===sel);
-  const fila = filaHtml('Pedidos de novo prazo', itens, sel, 'Nenhum pedido de prazo esperando você.', r=>r.equipe+' · '+NOMEPZ[r.prazo_tipo]+' até '+dt(r.prazo_sugerido));
+  const fila = filaHtml('Pedidos de novo prazo', itens, sel, 'Nenhum pedido de prazo esperando você.', r=>comResp(r)+' · '+NOMEPZ[r.prazo_tipo]+' até '+dt(r.prazo_sugerido));
   let corpo='';
   if(r){ const k='ap:'+r.id, d=val(k,'dec'), dAp=val(k,'data',r.prazo_sugerido), er=val(k,'_er',''), tpz=r.prazo_tipo, lim=limite(r,tpz);
     corpo=`<div class="trab" data-k="${k}">${cabecalho(r,'<span class="chip c-amb">EM EXECUÇÃO</span>')}
@@ -293,7 +300,7 @@ function vAprov(){
 /* ---------- Respostas ---------- */
 function vResp(){
   const itens=filas.resp().sort((a,b)=>String(a.etapa_desde).localeCompare(String(b.etapa_desde))), sel=selAtual('resp',itens), r=itens.find(x=>x.id===sel);
-  const fila = filaHtml('Para responder', itens, sel, 'Tudo respondido.', r=>ST[r.status][0]+' · '+r.equipe);
+  const fila = filaHtml('Para responder', itens, sel, 'Tudo respondido.', r=>ST[r.status][0]+' · '+comResp(r));
   let corpo='';
   if(r){ const k='rs:'+r.id, er=val(k,'_er',''), s=ST[r.status], det=precisaDet(r.id);
     corpo=`<div class="trab" data-k="${k}">${cabecalho(r,'<span class="chip c-amb">AGUARDANDO RESPOSTA</span>')}${blocoDados(r)}
